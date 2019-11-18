@@ -3,9 +3,12 @@ package release
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"strings"
 
-	"github.com/K-Phoen/semver-release-action/internal/pkg/action"
+	"github.com/cbrwizard/semver-release-action/internal/pkg/action"
 	"github.com/google/go-github/v28/github"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
@@ -30,8 +33,8 @@ func Command() *cobra.Command {
 	var releaseType string
 
 	cmd := &cobra.Command{
-		Use:  "release [REPOSITORY] [TARGET_COMMITISH] [VERSION] [GH_TOKEN]",
-		Args: cobra.ExactArgs(4),
+		Use:  "release [REPOSITORY] [TARGET_COMMITISH] [VERSION] [GH_TOKEN] [GH_EVENT_PATH]",
+		Args: cobra.ExactArgs(5),
 		Run: func(cmd *cobra.Command, args []string) {
 			execute(cmd, releaseType, args)
 		},
@@ -54,6 +57,7 @@ func execute(cmd *cobra.Command, releaseType string, args []string) {
 		version: args[2],
 		target:  args[1],
 	}
+	pullRequestEvent := parseEvent(cmd, args[4])
 
 	ctx := context.Background()
 
@@ -64,7 +68,7 @@ func execute(cmd *cobra.Command, releaseType string, args []string) {
 	case releaseTypeNone:
 		return
 	case releaseTypeRelease:
-		if err := createGithubRelease(ctx, client, repo, release); err != nil {
+		if err := createGithubRelease(ctx, client, repo, release, *pullRequestEvent); err != nil {
 			action.AssertNoError(cmd, err, "could not create GitHub release: %s", err)
 		}
 		return
@@ -89,14 +93,40 @@ func createLightweightTag(ctx context.Context, client *github.Client, repo repos
 	return err
 }
 
-func createGithubRelease(ctx context.Context, client *github.Client, repo repository, release releaseDetails) error {
+func createGithubRelease(ctx context.Context, client *github.Client, repo repository, release releaseDetails, pullRequest github.PullRequestEvent) error {
+	log.Print("Pull request body:")
+	log.Print(pullRequest.PullRequest.Body)
 	_, _, err := client.Repositories.CreateRelease(ctx, repo.owner, repo.name, &github.RepositoryRelease{
 		Name:            &release.version,
 		TagName:         &release.version,
 		TargetCommitish: &release.target,
+		Body:            pullRequest.PullRequest.Body,
 		Draft:           github.Bool(false),
 		Prerelease:      github.Bool(false),
 	})
 
 	return err
+}
+
+func parseEvent(cmd *cobra.Command, filePath string) *github.PullRequestEvent {
+	parsed, err := github.ParseWebHook("pull_request", readEvent(cmd, filePath))
+	action.AssertNoError(cmd, err, "could not parse GitHub event: %s", err)
+
+	event, ok := parsed.(*github.PullRequestEvent)
+	if !ok {
+		action.Fail(cmd, "could not parse GitHub event into a PullRequestEvent: %s", err)
+	}
+
+	return event
+}
+
+func readEvent(cmd *cobra.Command, filePath string) []byte {
+	file, err := os.Open(filePath)
+	action.AssertNoError(cmd, err, "could not open GitHub event file: %s", err)
+	defer file.Close()
+
+	b, err := ioutil.ReadAll(file)
+	action.AssertNoError(cmd, err, "could not read GitHub event file: %s", err)
+
+	return b
 }

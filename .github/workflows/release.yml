@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Compute next SemVer tag
         id: semver
-        uses: K-Phoen/semver-release-action@master
+        uses: cbrwizard/semver-release-action@master
         with:
           release_branch: master
           release_strategy: none
@@ -41,7 +41,7 @@ jobs:
 
       - name: Create release
         id: tag
-        uses: K-Phoen/semver-release-action@master
+        uses: cbrwizard/semver-release-action@master
         with:
           release_branch: master
           tag: ${{ steps.semver.outputs.tag }}

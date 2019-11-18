@@ -1,8 +1,9 @@
-module github.com/K-Phoen/semver-release-action
+module github.com/cbrwizard/semver-release-action
 
 go 1.13
 
 require (
+	github.com/K-Phoen/semver-release-action v1.2.0 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v28 v28.1.1

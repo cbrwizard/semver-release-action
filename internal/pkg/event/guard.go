@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/K-Phoen/semver-release-action/internal/pkg/action"
-	"github.com/K-Phoen/semver-release-action/internal/pkg/semver"
+	"github.com/cbrwizard/semver-release-action/internal/pkg/action"
+	"github.com/cbrwizard/semver-release-action/internal/pkg/semver"
 	"github.com/google/go-github/github"
 	"github.com/spf13/cobra"
 )
